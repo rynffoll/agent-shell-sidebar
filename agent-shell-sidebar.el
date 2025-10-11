@@ -166,6 +166,10 @@ Keys are project root paths, values are alists with:
 (defvar-local agent-shell-sidebar--is-sidebar nil
   "Non-nil if this buffer is an agent-shell sidebar buffer.")
 
+(defvar agent-shell-sidebar--last-window nil
+  "Last selected window before entering sidebar.
+Used to restore focus when toggling sidebar off.")
+
 (cl-defun agent-shell-sidebar--make-state (&key buffer config last-buffer width)
   "Construct sidebar state with BUFFER, CONFIG, LAST-BUFFER, and WIDTH."
   (list (cons :buffer buffer)
@@ -337,46 +341,51 @@ Otherwise, interactively prompt the user to select from `agent-shell-agent-confi
              (selected-name (completing-read "Select agent: " choices nil t)))
         (map-elt choices selected-name))))
 
-(cl-defun agent-shell-sidebar--save-last-buffer (&key project-root)
-  "Save current buffer as last-buffer for PROJECT-ROOT if not a sidebar."
+(cl-defun agent-shell-sidebar--save-last-window ()
+  "Save the currently selected window before entering sidebar."
   (unless (agent-shell-sidebar--buffer-p (current-buffer))
-    (map-put! (agent-shell-sidebar--project-state project-root) :last-buffer (current-buffer))))
+    (setq agent-shell-sidebar--last-window (selected-window))))
 
-(cl-defun agent-shell-sidebar--restore-last-buffer (&key project-root)
-  "Restore focus to last buffer for PROJECT-ROOT or find window."
-  (let* ((state (agent-shell-sidebar--project-state project-root))
-         (last-buffer (map-elt state :last-buffer)))
-    (if (and last-buffer (buffer-live-p last-buffer))
-        (if-let* ((last-window (get-buffer-window last-buffer)))
-            (select-window last-window)
-          ;; Last buffer exists but not visible - try to find another window
-          (let ((mru-window (get-mru-window (selected-frame) nil :not-selected)))
-            (if mru-window
-                (select-window mru-window)
-              ;; No other window exists - display last-buffer
-              (switch-to-buffer last-buffer))))
-      ;; No last buffer - try to find most recently used window
-      (let ((mru-window (get-mru-window (selected-frame) nil :not-selected)))
-        (when mru-window
-          (select-window mru-window))))))
+(cl-defun agent-shell-sidebar--restore-last-window ()
+  "Restore focus to the last window before sidebar was entered."
+  (cond
+   ;; First, try the explicitly saved window
+   ((and agent-shell-sidebar--last-window
+         (window-live-p agent-shell-sidebar--last-window)
+         (not (agent-shell-sidebar--buffer-p
+               (window-buffer agent-shell-sidebar--last-window))))
+    (select-window agent-shell-sidebar--last-window))
+   ;; Fall back to most recently used non-sidebar window
+   (t
+    (let ((mru-window (get-mru-window (selected-frame) nil :not-selected)))
+      (if (and mru-window
+               (not (agent-shell-sidebar--buffer-p (window-buffer mru-window))))
+          (select-window mru-window)
+        ;; Last resort: find any non-sidebar window
+        (let ((other-window (get-window-with-predicate
+                             (lambda (w)
+                               (not (agent-shell-sidebar--buffer-p (window-buffer w))))
+                             nil nil)))
+          (when other-window
+            (select-window other-window))))))))
 
 (cl-defun agent-shell-sidebar--hide-sidebar (&key project-root window)
   "Hide sidebar WINDOW for PROJECT-ROOT and save width if unlocked."
   ;; Only save width when unlocked (user may have manually resized)
   (unless agent-shell-sidebar-locked
     (map-put! (agent-shell-sidebar--project-state project-root) :width (window-width window)))
-  (agent-shell-sidebar--restore-last-buffer :project-root project-root)
-  (delete-window window))
+  (delete-window window)
+  (agent-shell-sidebar--restore-last-window))
 
 (cl-defun agent-shell-sidebar--show-existing-sidebar (&key project-root buffer)
   "Show existing sidebar BUFFER for PROJECT-ROOT."
-  (agent-shell-sidebar--save-last-buffer :project-root project-root)
+  (agent-shell-sidebar--save-last-window)
   (let ((window (agent-shell-sidebar--display-buffer :buffer buffer :project-root project-root)))
     (select-window window)))
 
 (cl-defun agent-shell-sidebar--create-and-show-sidebar (&key project-root)
   "Create new sidebar for PROJECT-ROOT and show it."
-  (agent-shell-sidebar--save-last-buffer :project-root project-root)
+  (agent-shell-sidebar--save-last-window)
   (let* ((state (agent-shell-sidebar--project-state project-root))
          (config (or (map-elt state :config)
                      (agent-shell-sidebar--select-config)))
@@ -419,9 +428,9 @@ Each project maintains its own sidebar and last-buffer state."
          (sidebar-buffer (agent-shell-sidebar--get-buffer :project-root project-root))
          (in-sidebar (and sidebar-buffer (eq (current-buffer) sidebar-buffer))))
     (if in-sidebar
-        (agent-shell-sidebar--restore-last-buffer :project-root project-root)
+        (agent-shell-sidebar--restore-last-window)
       (progn
-        (agent-shell-sidebar--save-last-buffer :project-root project-root)
+        (agent-shell-sidebar--save-last-window)
         (cond
          ((agent-shell-sidebar--get-window :project-root project-root)
           (select-window (agent-shell-sidebar--get-window :project-root project-root)))
@@ -442,6 +451,7 @@ the selected provider."
         (config (agent-shell-sidebar--select-config)))
     (when-let* ((buffer (agent-shell-sidebar--get-buffer :project-root project-root)))
       (kill-buffer buffer))
+    (agent-shell-sidebar--save-last-window)
     (let* ((shell-buffer (agent-shell-sidebar--start-session :config config :project-root project-root))
            (window (agent-shell-sidebar--display-buffer :buffer shell-buffer :project-root project-root)))
       (select-window window))))
