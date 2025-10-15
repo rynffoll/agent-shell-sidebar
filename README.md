@@ -1,60 +1,61 @@
-#+TITLE: agent-shell-sidebar
-#+AUTHOR: Calum MacRae
+# agent-shell-sidebar
 
-A persistent sidebar interface for [[https://github.com/xenodium/agent-shell][agent-shell]], providing a treemacs-like side panel for interacting with LLM agents.
+A persistent sidebar interface for [agent-shell](https://github.com/xenodium/agent-shell), providing a treemacs-like side panel for interacting with LLM agents.
 
-* Features
+![Demo](demo.webp)
 
-- *Project-aware*: Each project gets its own independent sidebar with separate state
-- *Persistent*: Sidebar state persists across visibility toggles
-- *Configurable*: Flexible width (absolute or percentage), position (left/right), and locking behavior
-- *Responsive*: Locked sidebars automatically adjust to frame size changes
+## Features
 
-* Installation
+- **Project-aware**: Each project gets its own independent sidebar with separate state
+- **Persistent**: Sidebar state persists across visibility toggles
+- **Configurable**: Flexible width (absolute or percentage), position (left/right), and locking behavior
+- **Responsive**: Locked sidebars automatically adjust to frame size changes
 
-** Dependencies
+## Installation
+
+### Dependencies
 
 - Emacs 29.1+
-- [[https://github.com/xenodium/agent-shell][agent-shell]] 0.5.1+
+- [agent-shell](https://github.com/xenodium/agent-shell) 0.5.1+
 
-** Using =use-package=
+### Using `use-package`
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (use-package agent-shell-sidebar
   :after agent-shell
   :vc (:url "https://github.com/cmacrae/agent-shell-sidebar"))
-#+end_src
+```
 
-** Manual Installation
+### Manual Installation
 
 Clone the repository and add to your load path:
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (add-to-list 'load-path "/path/to/agent-shell-sidebar")
 (require 'agent-shell-sidebar)
-#+end_src
+```
 
-* Usage
+## Usage
 
-** Commands
+### Commands
 
-- =M-x agent-shell-sidebar-toggle= - Toggle sidebar visibility for current project
-- =M-x agent-shell-sidebar-toggle-focus= - Toggle focus between sidebar and last buffer
-- =M-x agent-shell-sidebar-change-provider= - Switch to a different agent provider
-- =M-x agent-shell-sidebar-reset= - Reset sidebar for current project
+- `M-x agent-shell-sidebar-toggle` - Toggle sidebar visibility for current project
+- `M-x agent-shell-sidebar-toggle-focus` - Toggle focus between sidebar and last buffer
+- `M-x agent-shell-sidebar-change-provider` - Switch to a different agent provider
+- `M-x agent-shell-sidebar-reset` - Reset sidebar for current project
 
-** Recommended Keybindings
+### Recommended Keybindings
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (global-set-key (kbd "C-c a s") #'agent-shell-sidebar-toggle)
 (global-set-key (kbd "C-c a f") #'agent-shell-sidebar-toggle-focus)
-#+end_src
+```
 
-* Configuration
+## Configuration
 
-** Basic Configuration
+### Basic Configuration
 
-#+begin_src emacs-lisp
+```emacs-lisp
 ;; Sidebar width (default: "25%")
 ;; Can be integer (columns) or string with % (percentage of frame)
 (setq agent-shell-sidebar-width "30%")
@@ -72,13 +73,13 @@ Clone the repository and add to your load path:
 ;; When locked: fixed size, invisible to other-window (C-x o)
 ;; When unlocked: manually resizable, visible to other-window
 (setq agent-shell-sidebar-locked nil)
-#+end_src
+```
 
-** Default Provider Configuration
+### Default Provider Configuration
 
 Set a default agent config to skip provider selection:
 
-#+begin_src emacs-lisp
+```emacs-lisp
 ;; Use Claude Code by default
 (setq agent-shell-sidebar-default-config
       (agent-shell-anthropic-make-claude-code-config))
@@ -95,11 +96,11 @@ Set a default agent config to skip provider selection:
        :shell-prompt "Custom> "
        :shell-prompt-regexp "Custom> "
        :client-maker #'my-custom-client-maker))
-#+end_src
+```
 
-** Complete Example
+### Complete Example
 
-#+begin_src emacs-lisp
+```emacs-lisp
 (use-package agent-shell-sidebar
   :after agent-shell
   :vc (:url "https://github.com/cmacrae/agent-shell-sidebar")
@@ -114,55 +115,55 @@ Set a default agent config to skip provider selection:
   :bind
   (("C-c a s" . agent-shell-sidebar-toggle)
    ("C-c a f" . agent-shell-sidebar-toggle-focus)))
-#+end_src
+```
 
-* How It Works
+## How It Works
 
-** Project State Management
+### Project State Management
 
 Each project root (detected via projectile or project.el) maintains independent state:
 
-- *Buffer*: The agent-shell buffer for this project
-- *Config*: The agent configuration being used
-- *Last Buffer*: The last non-sidebar buffer with focus
-- *Width*: The current width (when unlocked)
+- **Buffer**: The agent-shell buffer for this project
+- **Config**: The agent configuration being used
+- **Last Buffer**: The last non-sidebar buffer with focus
+- **Width**: The current width (when unlocked)
 
-** Width Calculation
+### Width Calculation
 
 Width is calculated with constraints applied in order:
 
-1. Parse configured width (=agent-shell-sidebar-width=)
-2. Apply minimum constraint (=agent-shell-sidebar-minimum-width=)
-3. Apply maximum constraint (=agent-shell-sidebar-maximum-width=)
+1. Parse configured width (`agent-shell-sidebar-width`)
+2. Apply minimum constraint (`agent-shell-sidebar-minimum-width`)
+3. Apply maximum constraint (`agent-shell-sidebar-maximum-width`)
 
 If minimum > maximum, minimum takes precedence.
 
-** Locked vs Unlocked Behavior
+### Locked vs Unlocked Behavior
 
-*Locked (default)*:
+**Locked (default)**:
 - Fixed width, recalculated from config on display
-- Invisible to =other-window= (C-x o)
+- Invisible to `other-window` (C-x o)
 - Responsive to frame size changes
 
-*Unlocked*:
+**Unlocked**:
 - Manually resizable
 - Width persists across visibility toggles
-- Visible to =other-window= commands
+- Visible to `other-window` commands
 
-* Contributing
+## Contributing
 
 Contributions welcome! Please open issues or pull requests on GitHub.
 
-* License
+## License
 
 GPL-3.0-or-later
 
-* Credits
+## Credits
 
-- *Álvaro Ramírez* - for the incredible [[https://github.com/xenodium/agent-shell][agent-shell]]
+- **Álvaro Ramírez** - for the incredible [agent-shell](https://github.com/xenodium/agent-shell)
 
-* See Also
+## See Also
 
-- [[https://github.com/xenodium/agent-shell][agent-shell]] - The main agent-shell package
-- [[https://github.com/xenodium/shell-maker][shell-maker]] - The underlying shell framework
-- [[https://github.com/xenodium/acp.el][acp.el]] - Agent Client Protocol implementation
+- [agent-shell](https://github.com/xenodium/agent-shell) - The main agent-shell package
+- [shell-maker](https://github.com/xenodium/shell-maker) - The underlying shell framework
+- [acp.el](https://github.com/xenodium/acp.el) - Agent Client Protocol implementation
