@@ -311,20 +311,17 @@ CONFIG should be an agent config alist."
     (when (and existing-buffer (buffer-live-p existing-buffer))
       (kill-buffer existing-buffer))
 
-    ;; Modify the config to ensure no-focus is set and new-session is true
-    (let* ((sidebar-config (copy-alist config)))
-      (map-put! sidebar-config :no-focus t)
-      (map-put! sidebar-config :new-session t)
+    (let ((shell-buffer (agent-shell--start :config config
+                                            :no-focus t
+                                            :new-session t)))
+      (with-current-buffer shell-buffer
+        (setq-local agent-shell-sidebar--is-sidebar t)
+        (add-hook 'kill-buffer-hook #'agent-shell-sidebar--clean-up nil t))
 
-      (let ((shell-buffer (agent-shell-start :config sidebar-config)))
-        (with-current-buffer shell-buffer
-          (setq-local agent-shell-sidebar--is-sidebar t)
-          (add-hook 'kill-buffer-hook #'agent-shell-sidebar--clean-up nil t))
+      (map-put! state :buffer shell-buffer)
+      (map-put! state :config config)
 
-        (map-put! state :buffer shell-buffer)
-        (map-put! state :config config)
-
-        shell-buffer))))
+      shell-buffer)))
 
 (defun agent-shell-sidebar--select-config ()
   "Select an agent config for the sidebar.
